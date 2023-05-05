@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>User Location</title>
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main">
+
+        <p>Client IP Address: <span id="ip"></span>
+            <button id="get-location-btn">Get Location</button>
+        </p>
+        
+        <div id="location-info"></div>
+        <div id="map-container"></div>
+        <div id="post-info"></div>
+        <div id="post-offices"></div>
+    </div>
+
+
+   
+	<script>
+		$(document).ready(function() {
+            
+            // Fetch location info on button click
+			$('#get-location-btn').on('click', function() {
+                // Get IP address on page load
+                $.getJSON('https://ipinfo.io/?token=9ce31075b14004', function(data) {
+                    $('#ip').text(data.ip);
+                    console.log(data);
+                });
+				$.getJSON('https://ipinfo.io/117.255.37.50?token=9ce31075b14004', function(data) {
+					console.log(data);
+					// $('#location-info').text('Location: ' + data.city + ', ' + data.region + ', ' + data.country);
+                    const [lat, long] = data.loc.split(",");
+                    $('#location-info').html(`
+                        <p>Latitude: ${lat}</p>
+                        <p>Longitude: ${long}</p>
+						<p>City: ${data.city}</p>
+						<p>Region: ${data.region}</p>
+						<p>Country: ${data.country}</p>
+						<p>Timezone: ${data.timezone}</p>
+                        <p>Organisation:${data.org}</p>
+                        <p>Hostname:${data.hostname}</p>
+						<p>Local Time: ${new Date().toLocaleString("en-US", {timeZone: data.timezone})}</p>
+                        <p>Pincode: ${data.postal}</p>
+					`);
+                    
+                    console.log(lat);
+                    console.log(long);
+					// var lat = data.latitude;
+					// var long = data.longitude;
+					// var mapUrl = 'https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3945694.455540422!2d'+long+'!3d'+lat+'!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sin!4v1683231582382!5m2!1sen!2sin';
+                    var mapUrl = `https://maps.google.com/maps?q=${lat},${long}&z=15&output=embed`;
+
+					$('#map-container').html('<iframe src="' + mapUrl + '" style="border: 0; width:50%; height: 400px;"></iframe>');
+					var timezone = data.timezone;
+					var currentTime = new Date(new Date().toLocaleString("en-US", {timeZone: timezone}));
+					console.log('Current time in ' + data.city + ': ' + currentTime.toLocaleString());
+
+
+                    // 'data' is the JSON object containing the pincode field
+                    const pincode = data.postal;const apiURL = `https://api.postalpincode.in/pincode/${pincode}`;
+                    fetch(apiURL)
+                    .then(response => response.json())
+                    .then(result => {
+                        // do something with the API response
+                        console.log(result);
+                        $('#post-info').html(`
+                        <p>Message:${result[0].Message}</p>`);
+
+                        const postOffices=result[0].PostOffice;
+                        let html='<h2>Post Offices in'+postOffices[0].District+','+postOffices[0].State+'</h2>';
+                        html+='<input type="text" id="searchBox" placeholder="Search by Name or Branch Type"/>';
+                        html += '<ul>';
+                        postOffices.forEach(postOffice => {
+                            html += '<li>';
+                            html+='<h2>Name:'+postOffice.Name+'</h2>';
+                           
+                            html += '<p>Branch Type: ' + postOffice.BranchType + '</p>';
+                            html += '<p>Delivery Status: ' + postOffice.DeliveryStatus + '</p>';
+
+                            html += '<p>District: ' + postOffice.District + '</p>';
+
+                            html += '<p>Division: ' + postOffice.Division + '</p>';
+                            
+                            html += '</li>';
+                        });
+                        html += '</ul>';
+                        $('#post-offices').html(html); 
+
+
+                        $('#searchBox').on('input', function() {
+                            const searchText = $(this).val().toLowerCase();
+                            $('li').each(function() {
+
+                                const name = $(this).find('h2').text().toLowerCase();
+                                const branchType = $(this).find('p:eq(0)').text().toLowerCase();
+                                if (name.includes(searchText) || branchType.includes(searchText)) {
+                                    $(this).show();
+                                } else {
+                                    $(this).hide();
+                                }
+                            });
+                        });
+
+                    })
+                    .catch(error => {
+                        console.error('Error fetching data from API:', error);
+                    });
+
+
+
+
+                   
+				});
+			});
+
+		});
+	</script>
+</body>
+</html>
